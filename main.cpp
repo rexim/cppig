@@ -64,46 +64,6 @@ Result<String, String> parse_include_path(String line)
     };
 }
 
-template <typename T, size_t Capacity>
-struct Fixed_Queue
-{
-    size_t begin = 0;
-    size_t size = 0;
-    T elements[Capacity];
-};
-
-template <typename T, size_t Capacity>
-void enqueue(Fixed_Queue<T, Capacity> *queue, T element)
-{
-    assert(queue->size < Capacity);
-    queue->elements[(queue->begin + queue->size) % Capacity] = element;
-    queue->size++;
-}
-
-template <typename T, size_t Capacity>
-T dequeue(Fixed_Queue<T, Capacity> *queue)
-{
-    assert(queue->size > 0);
-    T result = queue->elements[queue->begin];
-    queue->begin = (queue->begin + 1) % Capacity;
-    queue->size--;
-    return result;
-}
-
-template <typename T, size_t Capacity>
-struct Fixed_Stack
-{
-    size_t size = 0;
-    T elements[Capacity];
-};
-
-template <typename T, size_t Capacity>
-void push(Fixed_Stack<T, Capacity> *stack, T element)
-{
-    assert(stack->size < Capacity);
-    stack->elements[stack->size++] = element;
-}
-
 Fixed_Stack<String, 1024> visited;
 Fixed_Queue<String, 1024> wave;
 
