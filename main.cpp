@@ -65,6 +65,32 @@ Result<String, String> parse_include_path(String line)
 }
 
 template <typename T, size_t Capacity>
+struct Fixed_Queue
+{
+    size_t begin = 0;
+    size_t size = 0;
+    T elements[Capacity];
+};
+
+template <typename T, size_t Capacity>
+void enqueue(Fixed_Queue<T, Capacity> *queue, T element)
+{
+    assert(queue->size < Capacity);
+    queue->elements[(queue->begin + queue->size) % Capacity] = element;
+    queue->size++;
+}
+
+template <typename T, size_t Capacity>
+T dequeue(Fixed_Queue<T, Capacity> *queue)
+{
+    assert(queue->size > 0);
+    T result = queue->elements[queue->begin];
+    queue->begin = (queue->begin + 1) % Capacity;
+    queue->size--;
+    return result;
+}
+
+template <typename T, size_t Capacity>
 struct Fixed_Stack
 {
     size_t size = 0;
@@ -78,22 +104,22 @@ void push(Fixed_Stack<T, Capacity> *stack, T element)
     stack->elements[stack->size++] = element;
 }
 
-struct Edge
-{
-    String a;
-    String b;
-};
-
-void print1(FILE *stream, Edge edge)
-{
-    print(stream, edge.a, " -> ", edge.b);
-}
-
 Fixed_Stack<String, 1024> visited;
-Fixed_Stack<Edge, 1024> edges;
+Fixed_Queue<String, 1024> wave;
 
-static Region<20_Mb> file_memory;
-static Region<20_Mb> graph_memory;
+static Region<20_MiB> file_memory;
+static Region<20_MiB> graph_memory;
+
+bool is_visited(String file_path)
+{
+    for (size_t i = 0; i < visited.size; ++i) {
+        if (visited.elements[i] == file_path) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 int main(int argc, char *argv[])
 {
@@ -103,34 +129,32 @@ int main(int argc, char *argv[])
     }
 
     for (int i = 1; i < argc; ++i) {
-        file_memory.size = 0;
-        String current_file = copy(string_of_cstr(argv[i]), &graph_memory);
+        enqueue(&wave, string_of_cstr(argv[i]));
+    }
 
-        auto result = read_whole_file(argv[i], &file_memory);
+    while (wave.size != 0) {
+        auto current_file = dequeue(&wave);
+        if (is_visited(current_file)) continue;
+
+        file_memory.size = 0;
+        auto current_file_cstr = cstr_of_string(current_file, &file_memory);
+        auto result = read_whole_file(current_file_cstr, &file_memory);
         if (result.is_error) {
-            println(stderr, "Could not open file `", argv[i], "`: ", result.error);
+            println(stderr, "Could not open file `", current_file, "`: ", result.error);
             continue;
         }
-        auto content = result.unwrap;
 
-        auto unparsed = content;
-        while (unparsed.size > 0) {
-            auto line = chop_by_delim(&unparsed, '\n');
+        auto content = result.unwrap;
+        while (content.size > 0) {
+            auto line = chop_by_delim(&content, '\n');
             auto include_path = parse_include_path(line);
             if (!include_path.is_error) {
-                Edge edge {
-                    .a = current_file,
-                    .b = copy(include_path.unwrap, &graph_memory)
-                };
-                push(&edges, edge);
+                println(stdout, current_file, " -> ", include_path.unwrap);
+                enqueue(&wave, copy(include_path.unwrap, &graph_memory));
             }
         }
 
         push(&visited, current_file);
-    }
-
-    for (size_t i = 0; i < edges.size; ++i) {
-        println(stdout, edges.elements[i]);
     }
 
     return 0;

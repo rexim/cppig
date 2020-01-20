@@ -45,20 +45,23 @@ namespace aids
     ////////////////////////////////////////////////////////////
     // ALLOCATOR
     ////////////////////////////////////////////////////////////
+    // Ator  = Allocator (like Ctor or Dtor)
+    // Mator = Malloc Ator
+    ////////////////////////////////////////////////////////////
 
-    constexpr unsigned long long operator ""_Kb (unsigned long long s)
+    constexpr unsigned long long operator ""_KiB (unsigned long long s)
     {
         return s * 1024;
     }
 
-    constexpr unsigned long long operator ""_Mb (unsigned long long s)
+    constexpr unsigned long long operator ""_MiB (unsigned long long s)
     {
-        return s * 1024_Kb;
+        return s * 1024_KiB;
     }
 
-    constexpr unsigned long long operator ""_Gb (unsigned long long s)
+    constexpr unsigned long long operator ""_GiB (unsigned long long s)
     {
-        return s * 1024_Mb;
+        return s * 1024_MiB;
     }
 
     struct Mator {};
@@ -77,7 +80,7 @@ namespace aids
 
     Mator mator;
 
-    template <size_t Capacity = 640_Kb>
+    template <size_t Capacity = 640_KiB>
     struct Region
     {
         size_t size = 0;
@@ -109,6 +112,15 @@ namespace aids
             .size = strlen(data),
             .data = data
         };
+        return result;
+    }
+
+    template <typename Ator = Mator>
+    const char *cstr_of_string(String s, Ator *ator = &mator)
+    {
+        char *result = (char *)alloc(ator, s.size + 1);
+        memcpy(result, s.data, s.size);
+        result[s.size] = '\0';
         return result;
     }
 
