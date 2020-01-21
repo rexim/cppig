@@ -70,6 +70,7 @@ Fixed_Queue<String, 1024> wave;
 static Region<20_MiB> file_memory;
 static Region<20_MiB> graph_memory;
 
+// FIXME: is_visited check is O(N)
 bool is_visited(String file_path)
 {
     for (size_t i = 0; i < visited.size; ++i) {
@@ -81,15 +82,42 @@ bool is_visited(String file_path)
     return false;
 }
 
+void usage(FILE *stream)
+{
+    println(stream, "Usage: cppig [options] [--] <files...>");
+    println(stream, "  -s, --silent   silent mode, suppress all the warnings");
+    println(stream, "  -h, --help     show this help and exit");
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        println(stderr, "Usage: ", argv[0], " <files...>");
-        exit(1);
+    int options_end = 1;
+    bool silent = false;
+
+    while (options_end < argc) {
+        auto option = string_of_cstr(argv[options_end]);
+        if (option == "-s"_s || option == "--silent"_s) {
+            silent = true;
+            options_end += 1;
+        } else if (option == "-h"_s || option == "--help"_s) {
+            usage(stdout);
+            exit(0);
+        } else if (option == "--"_s) {
+            options_end += 1;
+            break;
+        } else {
+            break;
+        }
     }
 
-    for (int i = 1; i < argc; ++i) {
+    for (int i = options_end; i < argc; ++i) {
         enqueue(&wave, string_of_cstr(argv[i]));
+    }
+
+    if (wave.size == 0) {
+        println(stderr, "No files are provided");
+        usage(stderr);
+        exit(1);
     }
 
     println(stdout, "digraph include_graph {");
@@ -101,7 +129,9 @@ int main(int argc, char *argv[])
         auto current_file_cstr = cstr_of_string(current_file, &file_memory);
         auto result = read_whole_file(current_file_cstr, &file_memory);
         if (result.is_error) {
-            println(stderr, "Could not open file `", current_file, "`: ", result.error);
+            if (!silent) {
+                println(stderr, "Could not open file `", current_file, "`: ", result.error);
+            }
             continue;
         }
 
