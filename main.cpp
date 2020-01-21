@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
         enqueue(&wave, string_of_cstr(argv[i]));
     }
 
+    println(stdout, "digraph include_graph {");
     while (wave.size != 0) {
         auto current_file = dequeue(&wave);
         if (is_visited(current_file)) continue;
@@ -109,13 +110,15 @@ int main(int argc, char *argv[])
             auto line = chop_by_delim(&content, '\n');
             auto include_path = parse_include_path(line);
             if (!include_path.is_error) {
-                println(stdout, current_file, " -> ", include_path.unwrap);
+                println(stdout, "    \"", current_file, "\" -> \"", include_path.unwrap, "\";");
                 enqueue(&wave, copy(include_path.unwrap, &graph_memory));
             }
         }
 
         push(&visited, current_file);
     }
+
+    println(stdout, "}");
 
     return 0;
 }
