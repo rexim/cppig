@@ -85,20 +85,30 @@ bool is_visited(String file_path)
 void usage(FILE *stream)
 {
     println(stream, "Usage: cppig [options] [--] <files...>");
-    println(stream, "  -s, --silent   silent mode, suppress all the warnings");
-    println(stream, "  -h, --help     show this help and exit");
+    println(stream, "  -n, --name <name>  name of the graphviz graph");
+    println(stream, "  -s, --silent       silent mode, suppress all the warnings");
+    println(stream, "  -h, --help         show this help and exit");
 }
 
 int main(int argc, char *argv[])
 {
     int options_end = 1;
     bool silent = false;
+    String name = "include_graph"_s;
 
     while (options_end < argc) {
         auto option = string_of_cstr(argv[options_end]);
         if (option == "-s"_s || option == "--silent"_s) {
             silent = true;
             options_end += 1;
+        } else if (option == "-n"_s || option == "--name"_s) {
+            if (options_end + 1 >= argc) {
+                println(stderr, "No argument is provided for ", option);
+                usage(stderr);
+                exit(1);
+            }
+            name = string_of_cstr(argv[options_end + 1]);
+            options_end += 2;
         } else if (option == "-h"_s || option == "--help"_s) {
             usage(stdout);
             exit(0);
@@ -120,7 +130,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    println(stdout, "digraph include_graph {");
+    println(stdout, "digraph ", name, " {");
     while (wave.size != 0) {
         auto current_file = dequeue(&wave);
         if (is_visited(current_file)) continue;
