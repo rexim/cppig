@@ -64,35 +64,35 @@ Result<String, String> parse_include_path(String line)
     };
 }
 
-struct Filename
+struct File_Path
 {
     const char *unwrap;
 };
 
-Filename filename(const char *cstr)
+File_Path file_path(const char *cstr)
 {
     return { .unwrap = cstr };
 }
 
-void print1(FILE *stream, Filename filename)
+void print1(FILE *stream, File_Path file_path)
 {
-    print1(stream, filename.unwrap);
+    print1(stream, file_path.unwrap);
 }
 
-bool operator==(Filename a, Filename b)
+bool operator==(File_Path a, File_Path b)
 {
     return strcmp(a.unwrap, b.unwrap) == 0;
 }
 
-static Fixed_Stack<Filename, 1024> visited;
-static Fixed_Queue<Filename, 1024> wave;
-static Fixed_Stack<Filename, 1024> include_paths;
+static Fixed_Stack<File_Path, 1024> visited;
+static Fixed_Queue<File_Path, 1024> wave;
+static Fixed_Stack<File_Path, 1024> include_paths;
 
 static Region<20_MiB> file_memory;
 static Region<20_MiB> graph_memory;
 
 // FIXME: is_visited check is O(N)
-bool is_visited(Filename file_path)
+bool is_visited(File_Path file_path)
 {
     for (size_t i = 0; i < visited.size; ++i) {
         if (visited.elements[i] == file_path) {
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
             auto include_path = unwrap_or_exit(
                 cstr_of_string(drop(option, 2), &graph_memory),
                 "Not enough graph memory");
-            push(&include_paths, filename(include_path));
+            push(&include_paths, file_path(include_path));
             options_end += 1;
         } else if (option == "-h"_s || option == "--help"_s) {
             usage(stdout);
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     }
 
     for (int i = options_end; i < argc; ++i) {
-        enqueue(&wave, filename(argv[i]));
+        enqueue(&wave, file_path(argv[i]));
     }
 
     if (wave.size == 0) {
@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
                 println(stderr, "Traversing too many files, the memory limit has exceed");
                 exit(1);
             }
-            enqueue(&wave, filename(include_path_cstr.unwrap));
+            enqueue(&wave, file_path(include_path_cstr.unwrap));
         }
 
         push(&visited, current_file);
