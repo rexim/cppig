@@ -88,7 +88,7 @@ static Fixed_Stack<File_Path, 1024> visited;
 static Fixed_Queue<File_Path, 1024> wave;
 static Fixed_Stack<File_Path, 1024> include_paths;
 
-static Region<20_MiB> file_memory;
+static Region<20_MiB> temp_memory;
 static Region<20_MiB> graph_memory;
 
 // FIXME: is_visited check is O(N)
@@ -188,9 +188,9 @@ int main(int argc, char *argv[])
         auto current_file = dequeue(&wave);
         if (is_visited(current_file)) continue;
 
-        file_memory.size = 0;
+        temp_memory.size = 0;
 
-        auto result = read_whole_file(current_file.unwrap, &file_memory);
+        auto result = read_whole_file(current_file.unwrap, &temp_memory);
         if (result.is_error) {
             if (!silent) {
                 println(stderr, "Could not open file `", current_file, "`: ", result.error);
