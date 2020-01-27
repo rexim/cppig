@@ -86,6 +86,7 @@ bool operator==(Filename a, Filename b)
 
 static Fixed_Stack<Filename, 1024> visited;
 static Fixed_Queue<Filename, 1024> wave;
+static Fixed_Stack<Filename, 1024> include_paths;
 
 static Region<20_MiB> file_memory;
 static Region<20_MiB> graph_memory;
@@ -113,7 +114,6 @@ void usage(FILE *stream)
 struct Mebibytes
 {
     unsigned long long unwrap;
-
 };
 
 Mebibytes mebibytes(unsigned long long x)
@@ -156,6 +156,12 @@ int main(int argc, char *argv[])
             }
             name = string_of_cstr(argv[options_end + 1]);
             options_end += 2;
+        } else if (take(option, 2) == "-I"_s) {
+            auto include_path = unwrap_or_exit(
+                cstr_of_string(drop(option, 2), &graph_memory),
+                "Not enough graph memory");
+            push(&include_paths, filename(include_path));
+            options_end += 1;
         } else if (option == "-h"_s || option == "--help"_s) {
             usage(stdout);
             exit(0);

@@ -232,6 +232,30 @@ namespace aids
         return trim_begin(trim_end(s));
     }
 
+    template <typename T>
+    T min(T a, T b)
+    {
+        return a < b ? a : b;
+    }
+
+    String take(String s, size_t n)
+    {
+        return {
+            .size = min(n, s.size),
+            .data = s.data
+        };
+    }
+
+    String drop(String s, size_t n)
+    {
+        if (n > s.size) return { .size = 0 };
+
+        return {
+            .size = s.size - n,
+            .data = s.data + n
+        };
+    }
+
     ////////////////////////////////////////////////////////////
     // PRINT
     ////////////////////////////////////////////////////////////
