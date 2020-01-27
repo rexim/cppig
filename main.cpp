@@ -89,7 +89,7 @@ static Fixed_Queue<File_Path, 1024> wave;
 static Fixed_Stack<File_Path, 1024> include_paths;
 
 static Region<20_MiB> temp_memory;
-static Region<20_MiB> graph_memory;
+static Region<20_MiB> perm_memory;
 
 // FIXME: is_visited check is O(N)
 bool is_visited(File_Path file_path)
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
             options_end += 2;
         } else if (take(option, 2) == "-I"_s) {
             auto include_path = unwrap_or_exit(
-                cstr_of_string(drop(option, 2), &graph_memory),
+                cstr_of_string(drop(option, 2), &perm_memory),
                 "Not enough graph memory");
             push(&include_paths, file_path(include_path));
             options_end += 1;
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 
             println(stdout, "    \"", current_file, "\" -> \"", include_path.unwrap, "\";");
 
-            auto include_path_cstr = cstr_of_string(include_path.unwrap, &graph_memory);
+            auto include_path_cstr = cstr_of_string(include_path.unwrap, &perm_memory);
             if (include_path_cstr.is_error) {
                 println(stderr, "Traversing too many files, the memory limit has exceed");
                 exit(1);
