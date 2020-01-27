@@ -64,14 +64,34 @@ Result<String, String> parse_include_path(String line)
     };
 }
 
-Fixed_Stack<String, 1024> visited;
-Fixed_Queue<String, 1024> wave;
+struct Filename
+{
+    const char *unwrap;
+};
+
+Filename filename(const char *cstr)
+{
+    return { .unwrap = cstr };
+}
+
+void print1(FILE *stream, Filename filename)
+{
+    print1(stream, filename.unwrap);
+}
+
+bool operator==(Filename a, Filename b)
+{
+    return strcmp(a.unwrap, b.unwrap) == 0;
+}
+
+static Fixed_Stack<Filename, 1024> visited;
+static Fixed_Queue<Filename, 1024> wave;
 
 static Region<20_MiB> file_memory;
 static Region<20_MiB> graph_memory;
 
 // FIXME: is_visited check is O(N)
-bool is_visited(String file_path)
+bool is_visited(Filename file_path)
 {
     for (size_t i = 0; i < visited.size; ++i) {
         if (visited.elements[i] == file_path) {
@@ -88,6 +108,33 @@ void usage(FILE *stream)
     println(stream, "  -n, --name <name>  name of the graphviz graph");
     println(stream, "  -s, --silent       silent mode, suppress all the warnings");
     println(stream, "  -h, --help         show this help and exit");
+}
+
+struct Mebibytes
+{
+    unsigned long long unwrap;
+
+};
+
+Mebibytes mebibytes(unsigned long long x)
+{
+    return { .unwrap = x };
+}
+
+void print1(FILE *stream, Mebibytes mebibytes)
+{
+    print(stream, mebibytes.unwrap / 1024 / 1024, " MiB");
+}
+
+template <typename T, typename Error, typename... Prints>
+T unwrap_or_exit(Result<T, Error> result, Prints... prints)
+{
+    if (result.is_error) {
+        println(stderr, prints..., ": ", result.error);
+        exit(1);
+    }
+
+    return result.unwrap;
 }
 
 int main(int argc, char *argv[])
@@ -121,7 +168,7 @@ int main(int argc, char *argv[])
     }
 
     for (int i = options_end; i < argc; ++i) {
-        enqueue(&wave, string_of_cstr(argv[i]));
+        enqueue(&wave, filename(argv[i]));
     }
 
     if (wave.size == 0) {
@@ -136,8 +183,8 @@ int main(int argc, char *argv[])
         if (is_visited(current_file)) continue;
 
         file_memory.size = 0;
-        auto current_file_cstr = cstr_of_string(current_file, &file_memory);
-        auto result = read_whole_file(current_file_cstr, &file_memory);
+
+        auto result = read_whole_file(current_file.unwrap, &file_memory);
         if (result.is_error) {
             if (!silent) {
                 println(stderr, "Could not open file `", current_file, "`: ", result.error);
@@ -149,10 +196,18 @@ int main(int argc, char *argv[])
         while (content.size > 0) {
             auto line = chop_by_delim(&content, '\n');
             auto include_path = parse_include_path(line);
-            if (!include_path.is_error) {
-                println(stdout, "    \"", current_file, "\" -> \"", include_path.unwrap, "\";");
-                enqueue(&wave, copy(include_path.unwrap, &graph_memory));
+            if (include_path.is_error) {
+                continue;
             }
+
+            println(stdout, "    \"", current_file, "\" -> \"", include_path.unwrap, "\";");
+
+            auto include_path_cstr = cstr_of_string(include_path.unwrap, &graph_memory);
+            if (include_path_cstr.is_error) {
+                println(stderr, "Traversing too many files, the memory limit has exceed");
+                exit(1);
+            }
+            enqueue(&wave, filename(include_path_cstr.unwrap));
         }
 
         push(&visited, current_file);
