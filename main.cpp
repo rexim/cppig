@@ -88,8 +88,8 @@ static Fixed_Stack<File_Path, 1024> visited;
 static Fixed_Queue<File_Path, 1024> wave;
 static Fixed_Stack<File_Path, 1024> include_paths;
 
-static Region<20_MiB> temp_memory;
-static Region<20_MiB> perm_memory;
+static Region<20_MiB> temp_memory;            // Temporary dynamic memory the lifetime of which is a single file processing. After the file has processed, everything in this memory is cleaned up.
+static Region<20_MiB> perm_memory;            // Permanent dynamic memory the lifetime of which is the whole application. 
 
 // FIXME: is_visited check is O(N)
 bool is_visited(File_Path file_path)
