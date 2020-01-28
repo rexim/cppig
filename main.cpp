@@ -137,6 +137,30 @@ T unwrap_or_exit(Result<T, Error> result, Prints... prints)
     return result.unwrap;
 }
 
+#define FILE_PATH_DELIM "/"
+#define FILE_PATH_DELIM_SIZE (sizeof(FILE_PATH_DELIM) - 1)
+
+// TODO: join supports only Unix paths
+// TODO: join is not variadic for multicomponent paths
+
+template <typename Ator = Mator>
+Result<File_Path, Errno> join(File_Path base, File_Path file, Ator *ator = &mator)
+{
+    size_t base_size = strlen(base.unwrap);
+    size_t file_size = strlen(file.unwrap);
+    Result<char*, Errno> result = alloc<char*>(ator, base_size + file_size + FILE_PATH_DELIM_SIZE + 1);
+    if (result.is_error) return { .is_error = true, .error = result.error };
+
+    memcpy(result.unwrap, base.unwrap, base_size);
+    memcpy(result.unwrap + base_size, FILE_PATH_DELIM, FILE_PATH_DELIM_SIZE);
+    memcpy(result.unwrap + base_size + FILE_PATH_DELIM_SIZE, file.unwrap, file_size);
+    result.unwrap[base_size + file_size + FILE_PATH_DELIM_SIZE] = '\0';
+    return {
+        .is_error = false,
+        .unwrap = { .unwrap = result.unwrap }
+    };
+}
+
 int main(int argc, char *argv[])
 {
     int options_end = 1;
